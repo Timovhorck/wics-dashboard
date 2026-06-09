@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WICS Order Status Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0d0d0d;--surface:#1a1a1a;--surface2:#222;--border:#2a2a2a;--text:#e8e8e8;--text2:#888;--text3:#555;--teal:#00e5c0;--blue:#4da6ff;--orange:#ff9a3c;--green:#6bcb77;--purple:#a78bfa;--red:#ff5757}
+html,body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:13px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:48px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:100;overflow:hidden}
+.brand{font-size:16px;font-weight:800;letter-spacing:.12em;color:var(--teal)}
+.dbadge{background:var(--surface2);color:var(--text2);font-size:11px;font-weight:600;padding:3px 10px;border-radius:4px;margin-left:10px}
+.tright{display:flex;align-items:center;gap:12px;font-size:11px;color:var(--text2)}
+.ldot{width:7px;height:7px;border-radius:50%;background:var(--teal)}
+.ldot.L{background:var(--orange);animation:bl .7s infinite}
+.ldot.E{background:var(--red)}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.3}}
+.rbtn{background:var(--teal);color:#000;font-weight:700;font-size:11px;border:none;padding:6px 14px;border-radius:5px;cursor:pointer}
+.pbar{height:3px;background:var(--teal);position:absolute;bottom:0;left:0;transition:width 1s linear}
+.main{padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.mc{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;position:relative;overflow:hidden}
+.mc::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px}
+.mc.t::after{background:var(--teal)}.mc.b::after{background:var(--blue)}.mc.o::after{background:var(--orange)}.mc.g::after{background:var(--green)}.mc.p::after{background:var(--purple)}
+.mcl{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.mcv{font-size:36px;font-weight:700;line-height:1}
+.mcs{font-size:10px;color:var(--text3);margin-top:4px}
+.ttabs{display:flex;gap:6px;flex-wrap:wrap}
+.ttab{font-size:11px;font-weight:600;padding:4px 12px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;letter-spacing:.04em}
+.ttab.active{background:var(--teal);color:#000;border-color:var(--teal)}
+.crow{display:grid;grid-template-columns:1fr 400px;gap:14px}
+.brow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px 18px}
+.ptitle{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+.bl{display:flex;flex-direction:column;gap:7px}
+.bi{display:grid;grid-template-columns:110px 1fr 36px;align-items:center;gap:10px}
+.bn{font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bt{background:var(--surface2);border-radius:2px;height:5px;overflow:hidden}
+.bf{height:5px;border-radius:2px}
+.bv{font-size:11px;font-weight:700;text-align:right}
+.dw{display:flex;align-items:center;gap:16px}
+.dleg{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0}
+.di{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
+.dd{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.tbw{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:6px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+thead th.r{text-align:right}
+tbody td{padding:7px 10px;border-bottom:1px solid #1e1e1e;color:var(--text);font-size:12px}
+tbody td.r{text-align:right}
+tbody tr:hover{background:var(--surface2)}
+.bev{background:rgba(77,166,255,.15);color:var(--blue);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px}
+.uit{background:rgba(255,154,60,.15);color:var(--orange);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px}
+.afg{background:rgba(107,203,119,.15);color:var(--green);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px}
+.fbar{display:flex;align-items:center;justify-content:space-between;padding:8px 20px;border-top:1px solid var(--border);font-size:11px;color:var(--text3)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div style="display:flex;align-items:center"><span class="brand">WICS</span><span class="dbadge" id="D-date"></span></div>
+  <div class="tright"><span id="D-upd"></span><span class="ldot L" id="D-dot"></span><span id="D-cd"></span><button class="rbtn" onclick="Dfetch()">&#x21BB; Refresh</button></div>
+  <div class="pbar" id="D-pbar" style="width:100%"></div>
+</div>
+<div class="main">
+  <div class="metrics">
+    <div class="mc t"><div class="mcl">Totaal orders</div><div class="mcv" id="D-tot">-</div><div class="mcs">vandaag</div></div>
+    <div class="mc b"><div class="mcl">Bevestigd</div><div class="mcv" style="color:var(--blue)" id="D-bev">-</div><div class="mcs" id="D-bevs"></div></div>
+    <div class="mc o"><div class="mcl">In uitvoering</div><div class="mcv" style="color:var(--orange)" id="D-uit">-</div><div class="mcs" id="D-uits"></div></div>
+    <div class="mc g"><div class="mcl">Afgehandeld</div><div class="mcv" style="color:var(--green)" id="D-afg">-</div><div class="mcs" id="D-afgs"></div></div>
+    <div class="mc p"><div class="mcl">Landen</div><div class="mcv" style="color:var(--purple)" id="D-land">-</div><div class="mcs">bestemmingen</div></div>
+  </div>
+  <div class="ttabs">
+    <button class="ttab active" onclick="Dtype('alle',this)">ALLE <span id="Dtc-alle"></span></button>
+    <button class="ttab" onclick="Dtype('B2C',this)">B2C <span id="Dtc-B2C"></span></button>
+    <button class="ttab" onclick="Dtype('B2B',this)">B2B <span id="Dtc-B2B"></span></button>
+    <button class="ttab" onclick="Dtype('BPSP',this)">BPSP <span id="Dtc-BPSP"></span></button>
+    <button class="ttab" onclick="Dtype('STR',this)">STR <span id="Dtc-STR"></span></button>
+    <button class="ttab" onclick="Dtype('BATSP',this)">BATSP <span id="Dtc-BATSP"></span></button>
+  </div>
+  <div class="crow">
+    <div class="panel"><div class="ptitle">Orders per type</div><div style="position:relative;height:220px"><canvas id="D-bar"></canvas></div></div>
+    <div class="panel"><div class="ptitle">Verdeling per land</div><div class="dw"><div style="position:relative;width:150px;height:150px;flex-shrink:0"><canvas id="D-dgh"></canvas></div><div class="dleg" id="D-dleg"></div></div></div>
+  </div>
+  <div class="brow">
+    <div class="panel"><div class="ptitle">Klanten</div><div class="bl" id="D-kbl"></div></div>
+    <div class="panel"><div class="ptitle">Top bestemmingslanden</div><div class="bl" id="D-lbl"></div></div>
+  </div>
+  <div class="panel"><div class="ptitle">Alle orders vandaag</div><div class="tbw"><table><thead><tr><th>Klant</th><th>Referentie</th><th>Type</th><th>Status</th><th>Land</th><th class="r">Datum</th></tr></thead><tbody id="D-tbl"></tbody></table></div></div>
+</div>
+<div class="fbar"><span id="D-fl"></span><span style="color:var(--teal);font-weight:700" id="D-fr"></span></div>
+<script>
+const BASE='https://servicelayer.wics.nl';
+const KL=[{n:'MyBrakka',k:'NFKagRJKVYaJhaaEhLrG',s:'FyzdufStPFBQsWFGwCEb'},{n:'Nimya',k:'nJrhPBVRnbKvcKRDTxpw',s:'PsAWpdqbkNdRVLxSMINh'},{n:'NL Diffusion BV',k:'mzbROhOTyJaRNknbshBb',s:'XCXAWvqznHEagOklJhiK'},{n:'Noa Sports',k:'VySKpJXFJZyrLTivSwol',s:'oeZpZDUBEndDLlFwFmQM'},{n:'Organimal',k:'YdVgIVVvuXqcIzBsmxWD',s:'RBXSxApBDyGiNvTZasAE'},{n:'PavoCouture',k:'FPcIishwiJuQjMdEmBon',s:'WvjQCKLAmNuEFDJPLgMz'},{n:'PouchDirect',k:'FBewJuvRNbXzSdEQSUUw',s:'kuWRQWYSQdsJKYvhzEfu'},{n:'Rehall',k:'wPfPzCOFVaGYwtzsNSey',s:'ekaMaIifzbsvsKjNzehx'},{n:'Sacred Shop',k:'iCcUmIeigrKGuaXiJFpr',s:'KRusJttjxTWQYDytyCkM'},{n:'Seen In Ibiza',k:'mDaoSTgZAOfjrsZajoqi',s:'tehPgAIeLYXGIvdCkmqv'},{n:'Stappie',k:'jvWfRrMjLnsREDSzisSp',s:'ygqfgMSzEsVYXSMARLRt'},{n:'Studio Amaya',k:'JDgQsKLACVvGvQhGeeZa',s:'GhqPEtDHblOCDjwRmwHR'},{n:'Tameson',k:'KScFIJSRnlWCLgTfrGcf',s:'eEFddcmBuDOWaKYteMPT'},{n:'The Launch',k:'VkthfxeivuAzlawmqJnd',s:'QqezmMnYUEqOlxHCBHpf'},{n:'The View Yoga',k:'nNaZCkezkjQLCMTNxzPk',s:'QFHvxhRGeFxfXwpEbVQB'},{n:'Volumehair',k:'JeALRxQdvCECkeurIhMj',s:'PHIjpVzFUrHHmmnbtPVh'},{n:'Wallien',k:'bZhBKRIlhPNQmlCIPsTE',s:'ItetzfQqRLHDDxEfRbeu'},{n:'Wallien B2B',k:'vVFIeqHCfVQpLbfkJToG',s:'wycuDHREaottiJpRfIPj'},{n:'All Set',k:'VYTFbhwXkqNhaXGCVGzU',s:'jNWZfJBznJWxlMabCULG'},{n:'Amaya Amsterdam',k:'fofyzcGmBLpEYlAauJEh',s:'xGewtRknyUqJLzRHLmpC'},{n:'Batterijenstunter',k:'fXnCIdCuGBRGtclsUOlB',s:'CdgxCsWIHysEveBTXWvL'},{n:'Boorkopen.nl',k:'sJHcZtdddEavsEtXpOoF',s:'lCOTAkpqCUDLwmJNNkfH'},{n:'Brandfusion',k:'PabQLIPjJOxawULUYhUr',s:'YUjoPmchNhCaBpAkiGsC'},{n:'Brandfusion W',k:'EbkXjLskXhmLboxomhSL',s:'RnKfBTLSEkFcDXVJHOxE'},{n:'Brandmarc',k:'xvYiCPRorprKSeYcmXah',s:'ABxWjhyydKOxTKTgsLdY'},{n:'ByNoud',k:'RohCGhOgnvxbnLiDXsWF',s:'wWJhlfZAERBhMuuHsyVd'},{n:'Cacaoii',k:'ZNmZbYWUpFOIGizydZpe',s:'VtHRZWgJpJQEwbiUhedm'},{n:'Casual Lads',k:'ooYGPAkzPTcrjbXqlmRr',s:'ZnLDJqVxPrSqvqYWcrax'},{n:'Celeste',k:'MrhmAUVkLQhbGvwnICyk',s:'kPbHCmOqeulZysfKUgBa'},{n:'CultureCulture',k:'QKhpsZMGCpuroEayYZIH',s:'FXhBGAXmROpUADagKQjD'},{n:'Ellastiek',k:'VYEvFlklZSyVGhJwLmVG',s:'uRTXPyyEsMicUwYCcnvi'},{n:'Frankie & Liberty',k:'UyqcoLSnWDkwVunkSceS',s:'FqPpPUNweOtXUmBhBLaU'},{n:'Greenfield',k:'JlkMybstHHLqtwWMBWAW',s:'ShZJijHJcjzjvbXYsTVQ'},{n:'Huidvisie',k:'oEJsvJfsGHGDilMUxJLg',s:'CuZhNuhFtDgrzZukthhd'},{n:'Lou Lilly',k:'dVUKWNIghJbrgFHiFOIZ',s:'aDERZuxwELivtBmYffNQ'},{n:'MesVoeuxWear',k:'KsLbdGQbiILptCJWrplW',s:'qiqMilbEXhysbyLSQDNP'}];
+const TYPES=['B2C','B2B','BPSP','STR','BATSP'],BEV=['30'],UIT=['35','40','42','50'],AFG=['60','65','70'],ALLE=[...BEV,...UIT,...AFG];
+const CN={NL:'Netherlands',GB:'United Kingdom',BE:'Belgium',US:'United States',FR:'France',DE:'Germany',ES:'Spain',CA:'Canada',AT:'Austria',IT:'Italy',SE:'Sweden',DK:'Denmark',PL:'Poland',CH:'Switzerland',NO:'Norway',FI:'Finland',PT:'Portugal',CZ:'Czech Republic'};
+const CC=['#00e5c0','#4da6ff','#ff9a3c','#ff6b9d','#a78bfa','#ffd93d','#6bcb77','#ff5757','#38bdf8','#fb923c','#e879f9','#a3e635'];
+let allO=[],aT='alle',cd=60,tmr=null,bC=null,dC=null;
+const tod=()=>new Date().toISOString().split('T')[0];
+const au=(k,s)=>'Basic '+btoa(k+':'+s);
+function sc(o){const r=String(o.statusCode||'').trim();if(/^d+$/.test(r))return r.padStart(2,'0');const l=r.toLowerCase();if(l.includes('bevestigd'))return'30';if(l.includes('batch'))return'35';if(l.includes('uitvoering'))return'40';if(l.includes('geconsolideerd'))return'42';if(l.includes('gedeeltelijk'))return'50';if(l.includes('onvolledig'))return'65';if(l.includes('volledig'))return'60';if(l.includes('geen'))return'70';return r;}
+function ot(o){const t=String(o.type||o.method||'').toUpperCase().trim();if(t==='B2C'||t==='WEB')return'B2C';if(t==='B2B'||t==='B2BW')return'B2B';if(['BPSP','STR','BATSP'].includes(t))return t;return t||'OVERIG';}
+async function fk(kl){const d=tod();try{let all=[],pg=1;while(true){const r=await fetch(BASE+'/api/order?deliveryDate='+d+'&page='+pg+'&pageSize=100',{headers:{'Authorization':au(kl.k,kl.s),'Accept':'application/json'},signal:AbortSignal.timeout(12000)});if(!r.ok)break;const j=await r.json();const data=Array.isArray(j.data)?j.data:[];data.forEach(o=>all.push({...o,_n:kl.n,_s:sc(o),_t:ot(o),_c:o.deliveryAddress?.country||'?'}));if(data.length<100)break;pg++;}return all;}catch(e){return[];}}
+window.Dfetch=async function(){document.getElementById('D-dot').className='ldot L';const res=await Promise.allSettled(KL.map(k=>fk(k)));allO=res.flatMap(r=>r.status==='fulfilled'?r.value:[]).filter(o=>ALLE.includes(o._s));const now=new Date();document.getElementById('D-date').textContent=now.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(///g,'-');document.getElementById('D-upd').textContent='Bijgewerkt: '+now.toLocaleTimeString('nl-NL');document.getElementById('D-fl').textContent=now.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});document.getElementById('D-dot').className='ldot'+(allO.length?'':' E');Drender();Dreset();};
+function filt(){return aT==='alle'?allO:allO.filter(o=>o._t===aT);}
+const cn=(os,cs)=>os.filter(o=>cs.includes(o._s)).length,ct=(os,t)=>os.filter(o=>o._t===t).length;
+function Drender(){const f=filt(),tot=f.length,bev=cn(f,BEV),uit=cn(f,UIT),afg=cn(f,AFG),land=new Set(f.map(o=>o._c)).size;['tot','bev','uit','afg','land'].forEach((id,i)=>document.getElementById('D-'+id).textContent=[tot,bev,uit,afg,land][i]);document.getElementById('D-bevs').textContent=Math.round(bev/Math.max(tot,1)*100)+'% van totaal';document.getElementById('D-uits').textContent=Math.round(uit/Math.max(tot,1)*100)+'% van totaal';document.getElementById('D-afgs').textContent=Math.round(afg/Math.max(tot,1)*100)+'% van totaal';document.getElementById('D-fr').textContent=tot+' orders vandaag';document.getElementById('Dtc-alle').textContent='('+allO.length+')';TYPES.forEach(t=>{const e=document.getElementById('Dtc-'+t);if(e)e.textContent='('+ct(allO,t)+')';});const at=TYPES.filter(t=>ct(f,t)>0);if(bC)bC.destroy();bC=new Chart(document.getElementById('D-bar'),{type:'bar',data:{labels:at,datasets:[{label:'Bevestigd',data:at.map(t=>cn(f.filter(o=>o._t===t),BEV)),backgroundColor:'#4da6ff',borderRadius:3,stack:'s'},{label:'In uitvoering',data:at.map(t=>cn(f.filter(o=>o._t===t),UIT)),backgroundColor:'#ff9a3c',borderRadius:3,stack:'s'},{label:'Afgehandeld',data:at.map(t=>cn(f.filter(o=>o._t===t),AFG)),backgroundColor:'#00e5c0',borderRadius:3,stack:'s'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{color:'#888',font:{size:11},boxWidth:10,padding:12}}},scales:{x:{stacked:true,ticks:{color:'#666'},grid:{color:'rgba(255,255,255,.04)'}},y:{stacked:true,ticks:{color:'#666'},grid:{color:'rgba(255,255,255,.06)'}}}}});const lc={};f.forEach(o=>{const c=CN[o._c]||o._c;lc[c]=(lc[c]||0)+1;});const tl=Object.entries(lc).sort((a,b)=>b[1]-a[1]).slice(0,10);if(dC)dC.destroy();dC=new Chart(document.getElementById('D-dgh'),{type:'doughnut',data:{labels:tl.map(x=>x[0]),datasets:[{data:tl.map(x=>x[1]),backgroundColor:CC,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false}}}});document.getElementById('D-dleg').innerHTML=tl.map((x,i)=>'<div class="di"><span class="dd" style="background:'+CC[i]+'"></span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+x[0]+'</span><strong style="color:#ccc;margin-left:4px">'+x[1]+'</strong></div>').join('');const kc={};f.forEach(o=>{kc[o._n]=(kc[o._n]||0)+1;});const tk=Object.entries(kc).sort((a,b)=>b[1]-a[1]).slice(0,12),mk=tk[0]?.[1]||1;document.getElementById('D-kbl').innerHTML=tk.map((x,i)=>'<div class="bi"><div class="bn">'+x[0]+'</div><div class="bt"><div class="bf" style="width:'+Math.round(x[1]/mk*100)+'%;background:'+CC[i%CC.length]+'"></div></div><div class="bv" style="color:'+CC[i%CC.length]+'">'+x[1]+'</div></div>').join('');const tll=Object.entries(lc).sort((a,b)=>b[1]-a[1]).slice(0,12),ml=tll[0]?.[1]||1;document.getElementById('D-lbl').innerHTML=tll.map((x,i)=>'<div class="bi"><div class="bn">'+x[0]+'</div><div class="bt"><div class="bf" style="width:'+Math.round(x[1]/ml*100)+'%;background:'+CC[i%CC.length]+'"></div></div><div class="bv" style="color:'+CC[i%CC.length]+'">'+x[1]+'</div></div>').join('');const rows=f.slice().sort((a,b)=>Number(b.number)-Number(a.number)).slice(0,100);const sl=s=>BEV.includes(s)?'<span class="bev">Bevestigd</span>':UIT.includes(s)?'<span class="uit">In uitvoering</span>':AFG.includes(s)?'<span class="afg">Afgehandeld</span>':s;document.getElementById('D-tbl').innerHTML=rows.length?rows.map(o=>'<tr><td>'+o._n+'</td><td style="color:#666">'+(o.reference||o.number||'')+'</td><td style="color:#00e5c0;font-weight:600">'+o._t+'</td><td>'+sl(o._s)+'</td><td style="color:#666">'+(CN[o._c]||o._c)+'</td><td class="r" style="color:#555">'+(o.deliveryDate||'')+'</td></tr>').join(''):'<tr><td colspan="6" style="text-align:center;color:#555;padding:20px">Geen orders</td></tr>';}
+window.Dtype=function(t,btn){aT=t;document.querySelectorAll('.ttab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');Drender();};
+function Dreset(){cd=60;if(tmr)clearInterval(tmr);const pb=document.getElementById('D-pbar');tmr=setInterval(()=>{cd--;const e=document.getElementById('D-cd');if(e)e.textContent='Refresh over '+cd+'s';if(pb)pb.style.width=(cd/60*100)+'%';if(cd<=0)Dfetch();},1000);}
+document.getElementById('D-date').textContent=new Date().toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(///g,'-');
+Dfetch();
+</script>
+</body>
+</html>
